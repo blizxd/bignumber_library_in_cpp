@@ -1,0 +1,16 @@
+{
+  "files.associations": {
+    "*.embeddedhtml": "html",
+    "limits": "cpp",
+    "iosfwd": "cpp",
+    "iterator": "cpp",
+    "system_error": "cpp",
+    "xlocale": "cpp",
+    "xstring": "cpp",
+    "array": "cpp",
+    "xutility": "cpp",
+    "ratio": "cpp",
+    "initializer_list": "cpp",
+    "type_traits": "cpp"
+  }
+}
