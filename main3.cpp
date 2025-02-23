@@ -214,9 +214,7 @@ public:
     digits = str;
 
     if (decimalPoint == string::npos)
-    {
       digits += ".0";
-    }
 
     removeLeadingZeroes();
     removeTrailingZeroes();
