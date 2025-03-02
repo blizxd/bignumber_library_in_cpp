@@ -7,9 +7,12 @@
 #include <iomanip>
 #include <exception>
 #include <sstream>
+#include <cstring>
 
 #define TEST_OP(a, op, b, res) assert(BigNumber(#a) op BigNumber(#b) == BigNumber(#res))
 #define TEST_METHOD(a, method, res) assert(BigNumber(#a).method == BigNumber(#res));
+#define TEST_METHOD_BOOL(a, method, res) assert(BigNumber(#a).method == res);
+#define TEST_COMPARE(a, op, b, res) assert((BigNumber(#a) op BigNumber(#b)) == res)
 
 using namespace std;
 
@@ -22,7 +25,14 @@ private:
   uint16_t decimalPoint;
   bool isNegative = false;
 
-  static inline int precision = 100;
+  static int precision;
+
+  static const int iterations = 100;
+
+  static BigNumber zero;
+  static BigNumber one;
+  static BigNumber two;
+  static BigNumber PI;
 
   BigNumber() {}
 
@@ -275,6 +285,7 @@ private:
     otherNormalized.decimalPoint = otherNormalized.digits.size();
     otherNormalized.removeLeadingZeroes();
     otherNormalized.digits += "0";
+    otherNormalized.isNegative = false;
 
     BigNumber res;
 
@@ -289,7 +300,7 @@ private:
 
     int resDigitsAfterPoint = digitsAfterPoint1 - digitsAfterPoint2;
 
-    int maxDivDigits = BigNumber::precision - resDigitsAfterPoint;
+    int maxDivDigits = max(BigNumber::precision - resDigitsAfterPoint, 0);
 
     if (other == zero)
     {
@@ -302,7 +313,7 @@ private:
 
     int takenZeroes = 0, i = 0;
 
-    while (takenZeroes < maxDivDigits)
+    while (takenZeroes <= maxDivDigits)
     {
 
       // Choose enough digits to divide
@@ -332,7 +343,7 @@ private:
         {
           res.digits += "0";
         }
-      } while (remainder < otherNormalized && takenZeroes < maxDivDigits);
+      } while (remainder < otherNormalized && takenZeroes <= maxDivDigits);
 
       BigNumber multiplier("1");
 
@@ -351,6 +362,7 @@ private:
 
     res.decimalPoint -= resDigitsAfterPoint;
 
+    res = res.truncate(precision);
     res.removeLeadingZeroes();
     res.removeTrailingZeroes();
 
@@ -358,6 +370,21 @@ private:
   }
 
 public:
+  // checks if the number is int (has no fractional part)
+  bool isInt() const
+  {
+    if (this->decimalPoint != this->digits.size() - 1)
+
+      return false;
+
+    string frac = this->digits.substr(this->decimalPoint);
+
+    if (frac == "0")
+      return true;
+
+    return false;
+  }
+
   BigNumber abs() const
   {
 
@@ -452,6 +479,25 @@ public:
     return res;
   }
 
+  BigNumber operator%(const BigNumber &other) const
+  {
+    if (!isInt() || !other.isInt())
+    {
+      throw invalid_argument("Modulus requires integer operands");
+    }
+    if (other == BigNumber("0"))
+    {
+      throw invalid_argument("Modulus by zero");
+    }
+
+    BigNumber quotient = *this / other;
+    BigNumber truncated = quotient.truncate(0);
+    BigNumber product = truncated * other;
+    BigNumber mod = *this - product;
+
+    return mod;
+  }
+
   bool operator<(const BigNumber &other) const
   {
 
@@ -515,6 +561,100 @@ public:
     return *this;
   }
 
+  BigNumber operator+=(const BigNumber &other)
+  {
+
+    *this = *this + other;
+
+    return *this;
+  }
+
+  BigNumber operator-=(const BigNumber &other)
+  {
+
+    *this = *this - other;
+
+    return *this;
+  }
+
+  BigNumber operator*=(const BigNumber &other)
+  {
+
+    *this = *this * other;
+
+    return *this;
+  }
+
+  BigNumber operator/=(const BigNumber &other)
+  {
+
+    *this = *this / other;
+
+    return *this;
+  }
+
+  BigNumber operator%=(const BigNumber &other)
+  {
+
+    *this = *this % other;
+
+    return *this;
+  }
+
+  // Calculate sine; n is in radians
+  static BigNumber sin(BigNumber n)
+  {
+    // Taylor series expansion at a =0
+
+    BigNumber period = two * PI;
+
+    while (n > period) // Reducing n by period (2*PI)
+    {
+      n -= period;
+    }
+
+    BigNumber x_i = n;
+
+    BigNumber res = x_i;
+
+    for (int i = 1; i < iterations; i++)
+    {
+
+      BigNumber converted_i(to_string(i));
+
+      x_i *= (-n * n) / ((two * converted_i) * (two * converted_i + one)); // Getting next term from previous
+
+      res += x_i;
+    }
+
+    return res;
+  }
+
+  // Calculate √x using newton's method
+  static BigNumber sqroot(BigNumber n)
+  {
+
+    if (n < zero)
+    {
+      throw std::invalid_argument("The argument should be non-negative");
+    }
+
+    // f(x) = x^2-n
+    // f'(x) = 2x
+
+    BigNumber x = n / two; // Initial guess
+
+    for (int i = 0; i < BigNumber::iterations; i++)
+    {
+      BigNumber f_x = x * x - n;
+      BigNumber fprime_x = two * x;
+
+      x = x - f_x / fprime_x; // x_(n+1) = x_n - f(x_n)/f'(x_n)
+    }
+
+    return x;
+  }
+
   // Sets the required precision for the `toString` method
   // Also modifies the precision of the division operation
   static void setPrecision(int precision)
@@ -533,6 +673,10 @@ public:
   // But does not add additinal zeroes
   BigNumber truncate(int precision) const
   {
+
+    if (precision < 0)
+      throw invalid_argument("Precision cannot be less than zero");
+
     BigNumber res = *this;
 
     int digitsAfterPoint = this->digits.size() - this->decimalPoint;
@@ -543,6 +687,11 @@ public:
     int diff = digitsAfterPoint - precision;
 
     res.digits = res.digits.substr(0, res.digits.size() - diff);
+
+    if (precision == 0)
+    {
+      res.digits += "0";
+    }
 
     return res;
   }
@@ -599,7 +748,7 @@ public:
 
     BigNumber res("1");
 
-    if (num > 10000 || num < 0)
+    if (num > 1000 || num < 0)
     {
       throw logic_error("Input is out of range");
     }
@@ -629,6 +778,13 @@ public:
     return res;
   }
 };
+
+BigNumber BigNumber::zero("0");
+BigNumber BigNumber::one("1");
+BigNumber BigNumber::two("2");
+BigNumber BigNumber::PI("3.14159265358979323846264");
+int BigNumber::precision = 100;
+
 int main()
 {
   /*
@@ -665,6 +821,7 @@ int main()
   BigNumber n52("108");
   BigNumber n53("8713902.317381273");
   BigNumber n54("0013.318380013");
+
 #pragma endregion
 
 #pragma region Testing toString
@@ -690,6 +847,18 @@ int main()
   assert(n21 <= n21 == true);
 
   assert(n21 > n22 == true);
+
+  TEST_COMPARE(505, <, 5.45, false);
+  TEST_COMPARE(888.888, <, 111.8099, false);
+  TEST_COMPARE(888.888, <, 888.888, false);
+  TEST_COMPARE(0.3334440, <, 0.3334441, true);
+
+  TEST_COMPARE(888.888, ==, 888.888, true);
+  TEST_COMPARE(888.888, >=, 888.888, true);
+  TEST_COMPARE(888.888, <=, 888.888, true);
+
+  TEST_COMPARE(888.888, >, 111.8099, true);
+
 #pragma endregion
 
 #pragma region Testing abs
@@ -704,19 +873,22 @@ int main()
 
   TEST_OP(-5, +, 3, -2);
   TEST_OP(5, +, -3, 2);
-  assert((n41 - n41).toString() == "0.0");
-  assert((-n41).toString() == "-8884.111");
-  assert(n41 - n41 == ZERO);
-  assert((n42 - n43).toString() == "1277.833");
-  assert((n43 - n42).toString() == "-1277.833");
+  TEST_OP(505, +, 5.45, 510.45);
+  TEST_OP(13000040.33, +, 1324241000.885000133, 1337241041.215000133);
+  TEST_OP(888.888, +, 111.8099, 1000.6979);
+
+  TEST_OP(8884.111, -, 8884.111, 0.0);
+  TEST_OP(8884.111, -, 1381.333, 7502.778);
+  TEST_OP(1381.333, -, 103.5, 1277.833);
+  TEST_OP(103.5, -, 1381.333, -1277.833);
 
 #pragma endregion
 
 #pragma region Multiplication
-  assert((n51 * n52).toString() == "4104.0");
-  assert((n51 * (-n52)).toString() == "-4104.0");
-  assert((n53 * n54).toString() == "116055062.459045128823696549");
-  assert(ZERO * n21 == ZERO);
+  TEST_OP(38, *, 108, 4104.0);
+  TEST_OP(38, *, -108, -4104.0);
+  TEST_OP(8713902.317381273, *, 13.318380013, 116055062.459045128823696549);
+  TEST_OP(0, *, 888.888, 0.0);
   TEST_OP(0.00238, *, 1315.55, 3.131009);
 
 #pragma endregion
@@ -749,23 +921,18 @@ int main()
 
 #pragma region Division
 
-  BigNumber n61("3684549.96"), n62("655.2"), n65("5623.55");
-  BigNumber n63("330"), n64("11");
-  BigNumber n71("3.131009"), n72("0.00238");
-
-  assert((n63 / n64).toString() == "30.0");
-  assert((n61 / n62).toString() == "5623.55");
-  assert((n65 * n62).toString() == "3684549.96");
-  assert((ZERO / n52).toString() == "0.0");
-  assert((-n61 / n62).toString() == "-5623.55");
-  assert((n71 / n72).toString() == "1315.55");
-
+  TEST_OP(3684549.96, /, 655.2, 5623.55);
+  TEST_OP(330, /, 11, 30.0);
+  TEST_OP(5623.55, *, 655.2, 3684549.96);
+  TEST_OP(0, /, 108, 0.0);
+  TEST_OP(-3684549.96, /, 655.2, -5623.55);
+  TEST_OP(3684549.96, /, -655.2, -5623.55);
   TEST_OP(3.131009, /, 0.00238, 1315.55);
 
   BigNumber::setPrecision(10);
-
   TEST_OP(1213441, /, 313414, 3.8716872890);
   TEST_OP(912431274897118178471, /, 31132.0313797000001, 29308440036202697.2732357821);
+
 #pragma endregion
 
 #pragma region Truncate
@@ -773,6 +940,39 @@ int main()
   TEST_METHOD(0.13134, truncate(3), 0.131);
   TEST_METHOD(0.13134, truncate(5), 0.13134);
   TEST_METHOD(1000, truncate(1), 1000);
+
+#pragma endregion
+
+#pragma region isInt
+
+  TEST_METHOD_BOOL(3132213, isInt(), true);
+  TEST_METHOD_BOOL(00, isInt(), true);
+  TEST_METHOD_BOOL(-313.2213, isInt(), false);
+  TEST_METHOD_BOOL(-0.00000001, isInt(), false);
+  TEST_METHOD_BOOL(-0.00000000, isInt(), true);
+
+#pragma endregion
+
+#pragma region Modulus
+  TEST_OP(5, %, 3, 2);
+  TEST_OP(10, %, 3, 1);
+  TEST_OP(-7, %, 3, -1);
+  TEST_OP(7, %, -3, 1);
+  TEST_OP(-7, %, -3, -1);
+  TEST_OP(0, %, 5, 0);
+  TEST_OP(25, %, 5, 0);
+  TEST_OP(100, %, 101, 100);
+  TEST_OP(123456789, %, 1000, 789);
+#pragma endregion
+
+#pragma region Extra
+
+  BigNumber::setPrecision(100);
+
+  cout << BigNumber::sqroot(BigNumber("2")).toString() << endl;
+
+  BigNumber::setPrecision(30);
+  cout << BigNumber::sin(BigNumber("2")).toString() << endl;
 
 #pragma endregion
 
