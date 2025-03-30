@@ -1,14 +1,15 @@
-#include <iostream>
-#include <cstdint>
-#include <array>
-#include <string>
-#include <algorithm>
-#include <assert.h>
-#include <iomanip>
-#include <exception>
-#include <sstream>
-#include <cstring>
+
 #include "bigNumber.h"
+#include <algorithm>
+#include <array>
+#include <assert.h>
+#include <cstdint>
+#include <cstring>
+#include <exception>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 using namespace std;
 
@@ -17,18 +18,24 @@ using namespace std;
 BigNumber BigNumber::zero("0");
 BigNumber BigNumber::one("1");
 BigNumber BigNumber::two("2");
-BigNumber BigNumber::PI("3.14159265358979323846264");
-int BigNumber::precision = 100;
+BigNumber BigNumber::PI("3."
+                        "14159265358979323846264338327950288419716939937510582097494459230781640628"
+                        "62089986280348253421170679821480865132823066470938446095505");
+int BigNumber::precision = 120;
+int BigNumber::printPrecision = 99;
 // ----------------------------------
 
-BigNumber::BigNumber() {}
+#pragma region Helper
+
+BigNumber::BigNumber()
+{
+}
 
 void BigNumber::removeTrailingZeroes()
 {
     int zeroesEndIndex = digits.find_last_not_of('0', digits.size() - 1);
 
-    if (zeroesEndIndex < decimalPoint ||
-        zeroesEndIndex == string::npos)
+    if (zeroesEndIndex < decimalPoint || zeroesEndIndex == string::npos)
     {
         zeroesEndIndex = decimalPoint;
     }
@@ -39,8 +46,7 @@ void BigNumber::removeLeadingZeroes()
 {
     int zeroesEndIndex = digits.find_first_not_of('0', 0);
 
-    if (zeroesEndIndex > decimalPoint - 1 ||
-        zeroesEndIndex == string::npos)
+    if (zeroesEndIndex > decimalPoint - 1 || zeroesEndIndex == string::npos)
     {
         zeroesEndIndex = decimalPoint - 1;
     }
@@ -88,20 +94,23 @@ bool BigNumber::compareAbsValue(const BigNumber &other) const
         return true;
     }
 
-    int maxSize = max(digits.size(), other.digits.size());
+    BigNumber left = this->truncate(precision);
+    BigNumber right = other.truncate(precision);
+
+    int maxSize = max(left.digits.size(), right.digits.size());
 
     for (int i = 0; i < maxSize; i++)
     {
 
-        if (i >= digits.size())
+        if (i >= left.digits.size())
             return true;
-        if (i >= other.digits.size())
+        if (i >= right.digits.size())
             return false;
 
-        if (digits[i] < other.digits[i])
+        if (left.digits[i] < right.digits[i])
             return true;
 
-        if (digits[i] > other.digits[i])
+        if (left.digits[i] > right.digits[i])
             return false;
     }
 
@@ -142,6 +151,7 @@ BigNumber BigNumber::addAbsValue(const BigNumber &other) const
 
     res.decimalPoint = res.digits.size() - (left.digits.size() - left.decimalPoint);
 
+    res = res.truncate(precision);
     res.removeLeadingZeroes();
     res.removeTrailingZeroes();
 
@@ -194,6 +204,7 @@ BigNumber BigNumber::subtractAbsValue(const BigNumber &other) const
 
     res.decimalPoint = left.decimalPoint;
 
+    res = res.truncate(precision);
     res.removeLeadingZeroes();
     res.removeTrailingZeroes();
 
@@ -258,6 +269,7 @@ BigNumber BigNumber::multiplyAbsValue(const BigNumber &other) const
 
     res.decimalPoint -= resDigitsAfterPoint;
 
+    res = res.truncate(precision);
     res.removeLeadingZeroes();
     res.removeTrailingZeroes();
 
@@ -356,6 +368,9 @@ BigNumber BigNumber::divideAbsValue(const BigNumber &other) const
     return res;
 }
 
+#pragma endregion
+
+#pragma region isInt, abs, truncate, round
 // checks if the number is int (has no fractional part)
 bool BigNumber::isInt() const
 {
@@ -379,6 +394,78 @@ BigNumber BigNumber::abs() const
 
     return res;
 }
+
+// Truncates the number to the required precision
+// But does not add additinal zeroes
+BigNumber BigNumber::truncate(int precision) const
+{
+
+    if (precision < 0)
+        throw invalid_argument("Precision cannot be less than zero");
+
+    BigNumber res = *this;
+
+    int digitsAfterPoint = this->digits.size() - this->decimalPoint;
+
+    if (digitsAfterPoint <= precision)
+        return res;
+
+    int diff = digitsAfterPoint - precision;
+
+    res.digits = res.digits.substr(0, res.digits.size() - diff);
+
+    if (precision == 0)
+    {
+        res.digits += "0";
+    }
+    res.removeTrailingZeroes();
+
+    return res;
+}
+
+BigNumber BigNumber::round(int precision) const
+{
+    if (precision < 0)
+        throw invalid_argument("Precision cannot be less than zero");
+
+    BigNumber res = *this;
+
+    int digitsAfterPoint = this->digits.size() - this->decimalPoint;
+
+    if (digitsAfterPoint <= precision)
+        return res;
+
+    int diff = digitsAfterPoint - precision;
+    res.digits = res.digits.substr(0, res.digits.size() - diff);
+
+    char lastDigit = digits[digits.size() - diff];
+
+    // Check if the last digit is 5 or greater
+    if (lastDigit >= '5')
+    {
+        // Make a temporary number with 0.0...0001 and add it to the number
+        BigNumber toAdd;
+        toAdd.digits.insert(0, precision, '0');
+        toAdd.digits += "1";
+        toAdd.decimalPoint = 1;
+
+        toAdd.digits += "0";
+        res += toAdd;
+    }
+
+    if (res.decimalPoint == res.digits.size())
+    {
+        res.digits += "0";
+    }
+
+    res.removeTrailingZeroes();
+
+    return res;
+}
+
+#pragma endregion
+
+#pragma region Operators
 
 BigNumber BigNumber::operator+(const BigNumber &other) const
 {
@@ -538,7 +625,7 @@ bool BigNumber::operator==(const BigNumber &other) const
     return true;
 }
 
-BigNumber BigNumber::operator=(const string &str)
+BigNumber &BigNumber::operator=(const string &str)
 {
     BigNumber res(str);
 
@@ -547,7 +634,7 @@ BigNumber BigNumber::operator=(const string &str)
     return *this;
 }
 
-BigNumber BigNumber::operator+=(const BigNumber &other)
+BigNumber &BigNumber::operator+=(const BigNumber &other)
 {
 
     *this = *this + other;
@@ -555,7 +642,7 @@ BigNumber BigNumber::operator+=(const BigNumber &other)
     return *this;
 }
 
-BigNumber BigNumber::operator-=(const BigNumber &other)
+BigNumber &BigNumber::operator-=(const BigNumber &other)
 {
 
     *this = *this - other;
@@ -563,7 +650,7 @@ BigNumber BigNumber::operator-=(const BigNumber &other)
     return *this;
 }
 
-BigNumber BigNumber::operator*=(const BigNumber &other)
+BigNumber &BigNumber::operator*=(const BigNumber &other)
 {
 
     *this = *this * other;
@@ -571,7 +658,7 @@ BigNumber BigNumber::operator*=(const BigNumber &other)
     return *this;
 }
 
-BigNumber BigNumber::operator/=(const BigNumber &other)
+BigNumber &BigNumber::operator/=(const BigNumber &other)
 {
 
     *this = *this / other;
@@ -579,7 +666,7 @@ BigNumber BigNumber::operator/=(const BigNumber &other)
     return *this;
 }
 
-BigNumber BigNumber::operator%=(const BigNumber &other)
+BigNumber &BigNumber::operator%=(const BigNumber &other)
 {
 
     *this = *this % other;
@@ -587,6 +674,21 @@ BigNumber BigNumber::operator%=(const BigNumber &other)
     return *this;
 }
 
+BigNumber BigNumber::operator-() const
+{
+
+    BigNumber res = *this;
+
+    res.isNegative = !this->isNegative;
+
+    return res;
+}
+
+#pragma endregion
+
+#pragma region Static methods
+
+// ----------------------------------------------------
 // Static methods
 // ----------------------------------------------------
 
@@ -596,10 +698,15 @@ BigNumber BigNumber::sin(BigNumber n)
     // Taylor series expansion at a =0
 
     BigNumber period = two * PI;
+    BigNumber PIOverTwo = PI / 2;
 
     while (n > period) // Reducing n by period (2*PI)
     {
         n -= period;
+    }
+    while (n > PIOverTwo)
+    {
+        n = PI - n;
     }
 
     BigNumber x_i = n;
@@ -608,11 +715,7 @@ BigNumber BigNumber::sin(BigNumber n)
 
     for (int i = 1; i < iterations; i++)
     {
-
-        BigNumber converted_i(to_string(i));
-
-        x_i *= (-n * n) / ((two * converted_i) * (two * converted_i + one)); // Getting next term from previous
-
+        x_i = x_i * intPow(n, 2) / ((2 * i) * (2 * i + 1)) * (-1);
         res += x_i;
     }
 
@@ -644,20 +747,6 @@ BigNumber BigNumber::sqroot(BigNumber n)
     return x;
 }
 
-// Sets the required precision for the `toString` method
-// Also modifies the precision of the division operation
-void BigNumber::setPrecision(int precision)
-{
-    if (precision < 1)
-        throw invalid_argument("Precision should not be less than 1");
-    BigNumber::precision = precision;
-}
-
-int BigNumber::getPrecision()
-{
-    return BigNumber::precision;
-}
-
 BigNumber BigNumber::factorial(int num)
 {
 
@@ -679,44 +768,222 @@ BigNumber BigNumber::factorial(int num)
     return res;
 }
 
-// ----------------------------------------------------
-
-// Truncates the number to the required precision
-// But does not add additinal zeroes
-BigNumber BigNumber::truncate(int precision) const
+BigNumber BigNumber::ln(BigNumber n)
 {
 
-    if (precision < 0)
-        throw invalid_argument("Precision cannot be less than zero");
+#pragma region old
+    // uint64_t steps = 10000;
 
-    BigNumber res = *this;
+    // if (n <= zero)
+    // {
+    //     throw std::invalid_argument("The argument should be positive");
+    // }
+    // if (n <= one)
+    // {
+    //     return -ln(one / n);
+    // }
 
-    int digitsAfterPoint = this->digits.size() - this->decimalPoint;
+    // BigNumber res = zero, x_i = one;
 
-    if (digitsAfterPoint <= precision)
-        return res;
+    // BigNumber dx = (n - one) / BigNumber(steps);
+    // for (int i = 0; i < steps; i++)
+    // {
 
-    int diff = digitsAfterPoint - precision;
+    //     x_i += dx;
 
-    res.digits = res.digits.substr(0, res.digits.size() - diff);
+    //     res += one / x_i * dx;
+    // }
 
-    if (precision == 0)
+    // return res;
+
+#pragma endregion
+
+    if (n <= 0)
+        throw invalid_argument("Argument should be positive");
+
+    BigNumber ln2 = string("0."
+                           "69314718055994530941723212145817656807550013436025525412068000949339362"
+                           "19696947156058633269964186875");
+
+    // use fact ln(2^p * g) = p * ln(2) + ln(g)
+    // find p
+
+    BigNumber p = 0;
+    BigNumber g = n;
+    while (g >= 2)
     {
-        res.digits += "0";
+        p += 1;
+        g /= 2;
+    }
+    while (g < 1)
+    {
+        p -= 1;
+        g *= 2;
     }
 
+    // https://math.stackexchange.com/questions/4519431/taylor-series-convergence-for-logx/4519474#4519474
+    BigNumber x_i;
+    BigNumber res = 0;
+
+    for (int i = 0; i < iterations; i++)
+    {
+
+        x_i = one / (2 * i + 1);
+        x_i *= intPow((g - 1) / (g + 1), 2 * i + 1);
+        res += x_i;
+    }
+
+    res *= 2;
+
+    return p * ln2 + res;
+}
+
+BigNumber BigNumber::intPow(BigNumber base, int exponent)
+{
+    BigNumber res = one;
+    for (int i = 0; i < exponent; i++)
+    {
+        res *= base;
+    }
     return res;
 }
 
-BigNumber BigNumber::operator-() const
+bool BigNumber::isPrime(BigNumber n)
+{
+    if (n <= one || !n.isInt())
+        return false;
+
+    BigNumber upperBound = n;
+
+    for (BigNumber i = two; BigNumber(i) < upperBound; i += one)
+    {
+        if (n % BigNumber(i) == zero)
+            return false;
+    }
+    return true;
+}
+
+BigNumber BigNumber::nextPrime(BigNumber n)
+{
+    if (n < two)
+        return two;
+
+    BigNumber begin = n.truncate(0) + 1;
+
+    while (!isPrime(begin))
+    {
+        begin += one;
+    }
+    return begin;
+}
+
+int BigNumber::find(BigNumber arr[], int size, BigNumber target)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (arr[i] == target)
+            return i;
+    }
+    return -1;
+}
+
+void BigNumber::bubbleSort(BigNumber arr[], int size)
 {
 
-    BigNumber res = *this;
+    bool swapped = false;
 
-    res.isNegative = !this->isNegative;
-
-    return res;
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size - i - 1; j++)
+        {
+            if (arr[j] > arr[j + 1])
+            {
+                swap(arr[j], arr[j + 1]);
+                swapped = true;
+            }
+        }
+        if (!swapped)
+            break;
+        swapped = false;
+    }
 }
+
+BigNumber BigNumber::getAverage(BigNumber arr[], int size)
+{
+    BigNumber sum = zero;
+    for (int i = 0; i < size; i++)
+        sum += arr[i];
+    return sum / BigNumber(size);
+}
+
+BigNumber BigNumber::chudnovskyPI(int n)
+{
+#pragma region old
+
+// BigNumber res = zero;
+
+// for (int i = 0; i < n; i++)
+// {
+//     BigNumber term = zero;
+
+//     term += BigNumber(13591409) + BigNumber(545140134) * BigNumber(i);
+//     term *= factorial(6 * i);
+//     if (i % 2 == 1)
+//         term *= -one;
+
+//     term /= factorial(3 * i) * intPow(factorial(i), 3) * intPow(BigNumber(640320), 3 * i);
+
+//     res += term;
+// }
+
+// res *= one / (BigNumber(426880) * sqroot(BigNumber(10005)));
+
+// res = one / res;
+
+// return res;
+#pragma endregion
+
+    BigNumber a_k = one;
+    BigNumber a_sum = one;
+    BigNumber b_sum = zero;
+    BigNumber C = 640320;
+
+    BigNumber C3_OVER_24 = intPow(C, 3) / 24;
+
+    for (int i = 1; i < n; i++)
+    {
+        a_k *= -(6 * i - 5) * (2 * i - 1) * (6 * i - 1);
+        a_k /= intPow(i, 3) * C3_OVER_24;
+        a_sum += a_k;
+        b_sum += a_k * i;
+    }
+
+    BigNumber total = a_sum * 13591409 + b_sum * 545140134;
+    BigNumber pi = sqroot(10005) * 426880 / total;
+
+    return pi.round(n);
+}
+
+// Modifies precision to which all arithemetic operations truncate
+// their results
+// Also sets the printPrecision which is less than actual
+// operations precision
+void BigNumber::setPrecision(int precision)
+{
+    if (precision < 1)
+        throw invalid_argument("Precision should not be less than 1");
+    BigNumber::precision = precision + 20;
+    BigNumber::printPrecision = precision;
+}
+
+int BigNumber::getPrecision()
+{
+    return BigNumber::printPrecision;
+}
+
+#pragma endregion
+
+// ----------------------------------------------------
 
 BigNumber::BigNumber(const string &str)
 {
@@ -745,6 +1012,7 @@ BigNumber::BigNumber(const string &str)
     decimalPoint = digits.find(".");
     digits.erase(decimalPoint, 1);
 
+    *this = this->truncate(precision);
     removeLeadingZeroes();
     removeTrailingZeroes();
 
@@ -755,10 +1023,17 @@ BigNumber::BigNumber(const string &str)
     }
 }
 
+BigNumber::BigNumber(double num) : BigNumber(to_string(num))
+{
+}
+
 string BigNumber::toString()
 {
 
-    string res = this->truncate(BigNumber::precision).digits;
+    BigNumber temp = this->round(BigNumber::printPrecision);
+    temp.removeTrailingZeroes();
+
+    string res = temp.digits;
 
     res.insert(decimalPoint, ".");
     if (isNegative)

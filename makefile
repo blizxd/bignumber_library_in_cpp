@@ -1,22 +1,28 @@
-CXX = g++
-CXXFLAGS = -std=c++11 -Wall -Wextra -pedantic -O3
+# Compiler and flags
+CC := g++
+CFLAGS := -g -Wall -Wextra -pedantic -std=c++11 
+LDFLAGS := 
 
-OBJ_DIR = build/obj
-BIN_DIR = build/bin
+# Directories
+SRC_DIR := .
+OBJ_DIR := build/obj
+BIN_DIR := build/bin
 
-SRCS = $(wildcard *.cpp)
-OBJS = $(patsubst %.cpp, $(OBJ_DIR)/%.o, $(SRCS))
-HEADERS = $(wildcard *.h)
+HEADERS := $(wildcard $(SRC_DIR)/*.h)
 
-EXECUTABLE = $(BIN_DIR)/main.exe
 
-all: $(EXECUTABLE)
+all : $(BIN_DIR)/demo.exe $(BIN_DIR)/test.exe
 
-$(EXECUTABLE): $(OBJS)
-	$(CXX) -o $@ $^
+$(BIN_DIR)/demo.exe : $(OBJ_DIR)/demo.o $(OBJ_DIR)/bigNumber.o
+	$(CC) $(LDFLAGS) -o $@ $^
 
-$(OBJ_DIR)/%.o: %.cpp $(HEADERS)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(BIN_DIR)/test.exe : $(OBJ_DIR)/test.o $(OBJ_DIR)/bigNumber.o
+	$(CC) $(LDFLAGS) -o $@ $^
 
-clean:
+$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp $(HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean :
 	rm -rf $(OBJ_DIR)/* $(BIN_DIR)/*
+
+.phony : clean all
