@@ -15,14 +15,11 @@ using namespace std;
 
 // Static initialization
 // ----------------------------------
-BigNumber BigNumber::zero("0");
-BigNumber BigNumber::one("1");
-BigNumber BigNumber::two("2");
-BigNumber BigNumber::PI("3."
-                        "14159265358979323846264338327950288419716939937510582097494459230781640628"
-                        "62089986280348253421170679821480865132823066470938446095505");
-int BigNumber::precision = 120;
-int BigNumber::printPrecision = 99;
+const BigNumber BigNumber::_zero("0");
+const BigNumber BigNumber::_one("1");
+const BigNumber BigNumber::_two("2");
+int BigNumber::_precision = 120;
+int BigNumber::_printPrecision = 99;
 // ----------------------------------
 
 #pragma region Helper
@@ -33,26 +30,26 @@ BigNumber::BigNumber()
 
 void BigNumber::removeTrailingZeroes()
 {
-    int zeroesEndIndex = digits.find_last_not_of('0', digits.size() - 1);
+    int zeroesEndIndex = _digits.find_last_not_of('0', _digits.size() - 1);
 
-    if (zeroesEndIndex < decimalPoint || zeroesEndIndex == string::npos)
+    if (zeroesEndIndex < _decimalPoint || zeroesEndIndex == string::npos)
     {
-        zeroesEndIndex = decimalPoint;
+        zeroesEndIndex = _decimalPoint;
     }
-    digits.erase(zeroesEndIndex + 1);
+    _digits.erase(zeroesEndIndex + 1);
 }
 
 void BigNumber::removeLeadingZeroes()
 {
-    int zeroesEndIndex = digits.find_first_not_of('0', 0);
+    int zeroesEndIndex = _digits.find_first_not_of('0', 0);
 
-    if (zeroesEndIndex > decimalPoint - 1 || zeroesEndIndex == string::npos)
+    if (zeroesEndIndex > _decimalPoint - 1 || zeroesEndIndex == string::npos)
     {
-        zeroesEndIndex = decimalPoint - 1;
+        zeroesEndIndex = _decimalPoint - 1;
     }
 
-    digits.erase(0, zeroesEndIndex);
-    decimalPoint -= zeroesEndIndex;
+    _digits.erase(0, zeroesEndIndex);
+    _decimalPoint -= zeroesEndIndex;
 }
 
 bool BigNumber::isValidInput(const string &str) const
@@ -71,46 +68,46 @@ bool BigNumber::isValidInput(const string &str) const
 void BigNumber::allignDecimalPlaces(BigNumber &left, BigNumber &right) const
 {
 
-    int leftFracLen = left.digits.size() - left.decimalPoint;
-    int rightFracLen = right.digits.size() - right.decimalPoint;
+    int leftFracLen = left._digits.size() - left._decimalPoint;
+    int rightFracLen = right._digits.size() - right._decimalPoint;
     int diff = rightFracLen - leftFracLen;
 
     // Check which num has more digits after decimal point
     if (diff > 0)
-        left.digits.append(diff, '0'); // Append to left
+        left._digits.append(diff, '0'); // Append to left
     else if (diff < 0)
-        right.digits.append(-diff, '0'); // Append to right
+        right._digits.append(-diff, '0'); // Append to right
 }
 
 // returns |this|<|other|
 bool BigNumber::compareAbsValue(const BigNumber &other) const
 {
-    if (decimalPoint > other.decimalPoint)
+    if (_decimalPoint > other._decimalPoint)
     {
         return false;
     }
-    else if (decimalPoint < other.decimalPoint)
+    else if (_decimalPoint < other._decimalPoint)
     {
         return true;
     }
 
-    BigNumber left = this->truncate(precision);
-    BigNumber right = other.truncate(precision);
+    BigNumber left = this->truncate(_precision);
+    BigNumber right = other.truncate(_precision);
 
-    int maxSize = max(left.digits.size(), right.digits.size());
+    int maxSize = max(left._digits.size(), right._digits.size());
 
     for (int i = 0; i < maxSize; i++)
     {
 
-        if (i >= left.digits.size())
+        if (i >= left._digits.size())
             return true;
-        if (i >= right.digits.size())
+        if (i >= right._digits.size())
             return false;
 
-        if (left.digits[i] < right.digits[i])
+        if (left._digits[i] < right._digits[i])
             return true;
 
-        if (left.digits[i] > right.digits[i])
+        if (left._digits[i] > right._digits[i])
             return false;
     }
 
@@ -120,7 +117,7 @@ bool BigNumber::compareAbsValue(const BigNumber &other) const
 BigNumber BigNumber::addAbsValue(const BigNumber &other) const
 {
     BigNumber res;
-    res.isNegative = false;
+    res._isNegative = false;
 
     BigNumber left = *this;
     BigNumber right = other;
@@ -130,28 +127,28 @@ BigNumber BigNumber::addAbsValue(const BigNumber &other) const
     uint8_t carry = 0;
     uint8_t temp = 0;
 
-    int i = left.digits.size() - 1;
-    int j = right.digits.size() - 1;
+    int i = left._digits.size() - 1;
+    int j = right._digits.size() - 1;
 
     while (i >= 0 || j >= 0 || carry)
     {
         temp = carry;
 
         if (i >= 0)
-            temp += left.digits[i--] - '0';
+            temp += left._digits[i--] - '0';
         if (j >= 0)
-            temp += right.digits[j--] - '0';
+            temp += right._digits[j--] - '0';
 
         carry = temp / 10;
 
-        res.digits += temp % 10 + '0';
+        res._digits += temp % 10 + '0';
     }
 
-    reverse(res.digits.begin(), res.digits.end());
+    reverse(res._digits.begin(), res._digits.end());
 
-    res.decimalPoint = res.digits.size() - (left.digits.size() - left.decimalPoint);
+    res._decimalPoint = res._digits.size() - (left._digits.size() - left._decimalPoint);
 
-    res = res.truncate(precision);
+    res = res.truncate(_precision);
     res.removeLeadingZeroes();
     res.removeTrailingZeroes();
 
@@ -164,34 +161,34 @@ BigNumber BigNumber::subtractAbsValue(const BigNumber &other) const
     assert(!compareAbsValue(other));
 
     BigNumber res;
-    res.isNegative = false;
+    res._isNegative = false;
 
     BigNumber left = *this;
     BigNumber right = other;
 
     allignDecimalPlaces(left, right);
 
-    int maxIntLen = max(left.decimalPoint, right.decimalPoint);
-    int leftPad = maxIntLen - left.decimalPoint;
-    int rightPad = maxIntLen - right.decimalPoint;
+    int maxIntLen = max(left._decimalPoint, right._decimalPoint);
+    int leftPad = maxIntLen - left._decimalPoint;
+    int rightPad = maxIntLen - right._decimalPoint;
 
-    left.digits.insert(0, leftPad, '0');
-    left.decimalPoint += leftPad;
+    left._digits.insert(0, leftPad, '0');
+    left._decimalPoint += leftPad;
 
-    right.digits.insert(0, rightPad, '0');
-    right.decimalPoint += rightPad;
+    right._digits.insert(0, rightPad, '0');
+    right._decimalPoint += rightPad;
 
-    int totalDigits = left.digits.size();
-    res.digits.resize(totalDigits, '0');
+    int totalDigits = left._digits.size();
+    res._digits.resize(totalDigits, '0');
 
     int borrow = 0;
 
     for (int i = totalDigits - 1; i >= 0; --i)
     {
-        int leftDigit = left.digits[i] - '0' - borrow;
+        int leftDigit = left._digits[i] - '0' - borrow;
         borrow = 0;
 
-        int rightDigit = right.digits[i] - '0';
+        int rightDigit = right._digits[i] - '0';
 
         if (leftDigit < rightDigit)
         {
@@ -199,12 +196,12 @@ BigNumber BigNumber::subtractAbsValue(const BigNumber &other) const
             borrow = 1;
         }
 
-        res.digits[i] = (leftDigit - rightDigit) + '0';
+        res._digits[i] = (leftDigit - rightDigit) + '0';
     }
 
-    res.decimalPoint = left.decimalPoint;
+    res._decimalPoint = left._decimalPoint;
 
-    res = res.truncate(precision);
+    res = res.truncate(_precision);
     res.removeLeadingZeroes();
     res.removeTrailingZeroes();
 
@@ -224,10 +221,10 @@ BigNumber BigNumber::multiplyAbsValue(const BigNumber &other) const
         return res;
     }
 
-    for (int i = digits.size() - 1; i >= 0; i--)
+    for (int i = _digits.size() - 1; i >= 0; i--)
     {
 
-        int j = other.digits.size() - 1;
+        int j = other._digits.size() - 1;
 
         BigNumber intermediate;
 
@@ -236,40 +233,40 @@ BigNumber BigNumber::multiplyAbsValue(const BigNumber &other) const
             temp = carry;
 
             if (j >= 0)
-                temp += (digits[i] - '0') * (other.digits[j] - '0');
+                temp += (_digits[i] - '0') * (other._digits[j] - '0');
 
             carry = temp / 10;
 
-            intermediate.digits += (temp % 10 + '0');
+            intermediate._digits += (temp % 10 + '0');
             j--;
         }
-        reverse(intermediate.digits.begin(), intermediate.digits.end());
+        reverse(intermediate._digits.begin(), intermediate._digits.end());
 
-        int rightOffset = digits.size() - 1 - i;
+        int rightOffset = _digits.size() - 1 - i;
 
-        intermediate.digits.append(rightOffset + 1, '0');
+        intermediate._digits.append(rightOffset + 1, '0');
 
-        intermediate.decimalPoint = intermediate.digits.size() - 1;
+        intermediate._decimalPoint = intermediate._digits.size() - 1;
 
         res = res + intermediate;
     }
 
-    int digitsAfterPoint1 = digits.size() - decimalPoint;
-    int digitsAfterPoint2 = other.digits.size() - other.decimalPoint;
+    int digitsAfterPoint1 = _digits.size() - _decimalPoint;
+    int digitsAfterPoint2 = other._digits.size() - other._decimalPoint;
 
     int resDigitsAfterPoint = digitsAfterPoint1 + digitsAfterPoint2;
 
-    int diff = res.decimalPoint - resDigitsAfterPoint - 1;
+    int diff = res._decimalPoint - resDigitsAfterPoint - 1;
 
     if (diff < 0)
     {
-        res.digits.insert(0, -diff, '0');
-        res.decimalPoint = res.digits.size() - 1;
+        res._digits.insert(0, -diff, '0');
+        res._decimalPoint = res._digits.size() - 1;
     }
 
-    res.decimalPoint -= resDigitsAfterPoint;
+    res._decimalPoint -= resDigitsAfterPoint;
 
-    res = res.truncate(precision);
+    res = res.truncate(_precision);
     res.removeLeadingZeroes();
     res.removeTrailingZeroes();
 
@@ -281,10 +278,10 @@ BigNumber BigNumber::divideAbsValue(const BigNumber &other) const
 
     BigNumber otherNormalized = other;
 
-    otherNormalized.decimalPoint = otherNormalized.digits.size();
+    otherNormalized._decimalPoint = otherNormalized._digits.size();
     otherNormalized.removeLeadingZeroes();
-    otherNormalized.digits += "0";
-    otherNormalized.isNegative = false;
+    otherNormalized._digits += "0";
+    otherNormalized._isNegative = false;
 
     BigNumber res;
 
@@ -294,12 +291,12 @@ BigNumber BigNumber::divideAbsValue(const BigNumber &other) const
 
     bool resReachedDecPart = false;
 
-    int digitsAfterPoint1 = digits.size() - decimalPoint;
-    int digitsAfterPoint2 = other.digits.size() - other.decimalPoint;
+    int digitsAfterPoint1 = _digits.size() - _decimalPoint;
+    int digitsAfterPoint2 = other._digits.size() - other._decimalPoint;
 
     int resDigitsAfterPoint = digitsAfterPoint1 - digitsAfterPoint2;
 
-    int maxDivDigits = max(BigNumber::precision - resDigitsAfterPoint, 0);
+    int maxDivDigits = max(BigNumber::_precision - resDigitsAfterPoint, 0);
 
     if (other == zero)
     {
@@ -319,10 +316,10 @@ BigNumber BigNumber::divideAbsValue(const BigNumber &other) const
         do
         {
 
-            if (i < this->digits.size())
+            if (i < this->_digits.size())
             {
                 // Add next digit of `this` to the remainder
-                BigNumber nextDigit(string(1, this->digits[i]));
+                BigNumber nextDigit = this->_digits[i] - '0';
 
                 remainder = remainder * ten + nextDigit;
                 i++;
@@ -331,7 +328,7 @@ BigNumber BigNumber::divideAbsValue(const BigNumber &other) const
             {
                 if (resReachedDecPart == false)
                 {
-                    res.decimalPoint = res.digits.size();
+                    res._decimalPoint = res._digits.size();
                     resReachedDecPart = true;
                 }
                 remainder = remainder * ten;
@@ -340,28 +337,28 @@ BigNumber BigNumber::divideAbsValue(const BigNumber &other) const
 
             if (remainder < otherNormalized)
             {
-                res.digits += "0";
+                res._digits += "0";
             }
         } while (remainder < otherNormalized && takenZeroes <= maxDivDigits);
 
-        BigNumber multiplier("1");
+        BigNumber multiplier = 1;
 
         // Choose the multiplier
         while (multiplier * otherNormalized <= remainder)
         {
-            multiplier = multiplier + one;
+            multiplier += 1;
         }
 
         multiplier = multiplier - one;
 
         remainder = remainder - otherNormalized * multiplier;
 
-        res.digits += multiplier.digits[0];
+        res._digits += multiplier._digits[0];
     }
 
-    res.decimalPoint -= resDigitsAfterPoint;
+    res._decimalPoint -= resDigitsAfterPoint;
 
-    res = res.truncate(precision);
+    res = res.truncate(_precision);
     res.removeLeadingZeroes();
     res.removeTrailingZeroes();
 
@@ -374,11 +371,11 @@ BigNumber BigNumber::divideAbsValue(const BigNumber &other) const
 // checks if the number is int (has no fractional part)
 bool BigNumber::isInt() const
 {
-    if (this->decimalPoint != this->digits.size() - 1)
+    if (this->_decimalPoint != this->_digits.size() - 1)
 
         return false;
 
-    string frac = this->digits.substr(this->decimalPoint);
+    string frac = this->_digits.substr(this->_decimalPoint);
 
     if (frac == "0")
         return true;
@@ -390,7 +387,7 @@ BigNumber BigNumber::abs() const
 {
 
     BigNumber res = *this;
-    res.isNegative = false;
+    res._isNegative = false;
 
     return res;
 }
@@ -405,18 +402,18 @@ BigNumber BigNumber::truncate(int precision) const
 
     BigNumber res = *this;
 
-    int digitsAfterPoint = this->digits.size() - this->decimalPoint;
+    int digitsAfterPoint = this->_digits.size() - this->_decimalPoint;
 
     if (digitsAfterPoint <= precision)
         return res;
 
     int diff = digitsAfterPoint - precision;
 
-    res.digits = res.digits.substr(0, res.digits.size() - diff);
+    res._digits = res._digits.substr(0, res._digits.size() - diff);
 
     if (precision == 0)
     {
-        res.digits += "0";
+        res._digits += "0";
     }
     res.removeTrailingZeroes();
 
@@ -430,37 +427,42 @@ BigNumber BigNumber::round(int precision) const
 
     BigNumber res = *this;
 
-    int digitsAfterPoint = this->digits.size() - this->decimalPoint;
+    int digitsAfterPoint = this->_digits.size() - this->_decimalPoint;
 
     if (digitsAfterPoint <= precision)
         return res;
 
     int diff = digitsAfterPoint - precision;
-    res.digits = res.digits.substr(0, res.digits.size() - diff);
+    res._digits = res._digits.substr(0, res._digits.size() - diff);
 
-    char lastDigit = digits[digits.size() - diff];
+    char lastDigit = _digits[_digits.size() - diff];
 
     // Check if the last digit is 5 or greater
     if (lastDigit >= '5')
     {
         // Make a temporary number with 0.0...0001 and add it to the number
         BigNumber toAdd;
-        toAdd.digits.insert(0, precision, '0');
-        toAdd.digits += "1";
-        toAdd.decimalPoint = 1;
+        toAdd._digits.insert(0, precision, '0');
+        toAdd._digits += "1";
+        toAdd._decimalPoint = 1;
 
-        toAdd.digits += "0";
+        toAdd._digits += "0";
         res += toAdd;
     }
 
-    if (res.decimalPoint == res.digits.size())
+    if (res._decimalPoint == res._digits.size())
     {
-        res.digits += "0";
+        res._digits += "0";
     }
 
     res.removeTrailingZeroes();
 
     return res;
+}
+
+bool BigNumber::isNegative() const
+{
+    return _isNegative;
 }
 
 #pragma endregion
@@ -472,20 +474,20 @@ BigNumber BigNumber::operator+(const BigNumber &other) const
 
     BigNumber res;
 
-    if (isNegative == other.isNegative)
+    if (_isNegative == other._isNegative)
     {
         res = addAbsValue(other);
-        res.isNegative = isNegative;
+        res._isNegative = _isNegative;
     }
     else if (compareAbsValue(other))
     {
         res = other.subtractAbsValue(*this);
-        res.isNegative = other.isNegative;
+        res._isNegative = other._isNegative;
     }
     else
     {
         res = subtractAbsValue(other);
-        res.isNegative = isNegative;
+        res._isNegative = _isNegative;
     }
 
     return res;
@@ -495,20 +497,20 @@ BigNumber BigNumber::operator-(const BigNumber &other) const
 {
 
     BigNumber res;
-    if (isNegative != other.isNegative)
+    if (_isNegative != other._isNegative)
     {
         res = addAbsValue(other);
-        res.isNegative = isNegative;
+        res._isNegative = _isNegative;
     }
     else if (compareAbsValue(other))
     {
         res = other.subtractAbsValue(*this);
-        res.isNegative = !isNegative;
+        res._isNegative = !_isNegative;
     }
     else
     {
         res = subtractAbsValue(other);
-        res.isNegative = isNegative;
+        res._isNegative = _isNegative;
     }
 
     return res;
@@ -519,15 +521,15 @@ BigNumber BigNumber::operator*(const BigNumber &other) const
 
     BigNumber res;
 
-    if (isNegative == other.isNegative)
+    if (_isNegative == other._isNegative)
     {
         res = multiplyAbsValue(other);
-        res.isNegative = false;
+        res._isNegative = false;
     }
     else
     {
         res = multiplyAbsValue(other);
-        res.isNegative = true;
+        res._isNegative = true;
     }
 
     return res;
@@ -538,15 +540,15 @@ BigNumber BigNumber::operator/(const BigNumber &other) const
 
     BigNumber res;
 
-    if (isNegative == other.isNegative)
+    if (_isNegative == other._isNegative)
     {
         res = divideAbsValue(other);
-        res.isNegative = false;
+        res._isNegative = false;
     }
     else
     {
         res = divideAbsValue(other);
-        res.isNegative = true;
+        res._isNegative = true;
     }
 
     return res;
@@ -574,11 +576,11 @@ BigNumber BigNumber::operator%(const BigNumber &other) const
 bool BigNumber::operator<(const BigNumber &other) const
 {
 
-    if (isNegative && !other.isNegative)
+    if (_isNegative && !other._isNegative)
         return true;
-    else if (isNegative && other.isNegative)
+    else if (_isNegative && other._isNegative)
         return compareAbsValue(other);
-    else if (!isNegative && other.isNegative)
+    else if (!_isNegative && other._isNegative)
         return false;
     else
         return compareAbsValue(other);
@@ -607,18 +609,18 @@ bool BigNumber::operator!=(const BigNumber &other) const
 
 bool BigNumber::operator==(const BigNumber &other) const
 {
-    if (digits.size() != other.digits.size())
+    if (_digits.size() != other._digits.size())
         return false;
 
-    if (decimalPoint != other.decimalPoint)
+    if (_decimalPoint != other._decimalPoint)
         return false;
 
-    if (isNegative != other.isNegative)
+    if (_isNegative != other._isNegative)
         return false;
 
-    for (int i = 0; i < digits.size(); i++)
+    for (int i = 0; i < _digits.size(); i++)
     {
-        if (digits[i] != other.digits[i])
+        if (_digits[i] != other._digits[i])
             return false;
     }
 
@@ -679,7 +681,7 @@ BigNumber BigNumber::operator-() const
 
     BigNumber res = *this;
 
-    res.isNegative = !this->isNegative;
+    res._isNegative = !this->_isNegative;
 
     return res;
 }
@@ -687,282 +689,6 @@ BigNumber BigNumber::operator-() const
 #pragma endregion
 
 #pragma region Static methods
-
-// ----------------------------------------------------
-// Static methods
-// ----------------------------------------------------
-
-// Calculate sine; n is in radians
-BigNumber BigNumber::sin(BigNumber n)
-{
-    // Taylor series expansion at a =0
-
-    BigNumber period = two * PI;
-    BigNumber PIOverTwo = PI / 2;
-
-    while (n > period) // Reducing n by period (2*PI)
-    {
-        n -= period;
-    }
-    while (n > PIOverTwo)
-    {
-        n = PI - n;
-    }
-
-    BigNumber x_i = n;
-
-    BigNumber res = x_i;
-
-    for (int i = 1; i < iterations; i++)
-    {
-        x_i = x_i * intPow(n, 2) / ((2 * i) * (2 * i + 1)) * (-1);
-        res += x_i;
-    }
-
-    return res;
-}
-
-// Calculate √x using newton's method
-BigNumber BigNumber::sqroot(BigNumber n)
-{
-
-    if (n < zero)
-    {
-        throw std::invalid_argument("The argument should be non-negative");
-    }
-
-    // f(x) = x^2-n
-    // f'(x) = 2x
-
-    BigNumber x = n / two; // Initial guess
-
-    for (int i = 0; i < BigNumber::iterations; i++)
-    {
-        BigNumber f_x = x * x - n;
-        BigNumber fprime_x = two * x;
-
-        x = x - f_x / fprime_x; // x_(n+1) = x_n - f(x_n)/f'(x_n)
-    }
-
-    return x;
-}
-
-BigNumber BigNumber::factorial(int num)
-{
-
-    BigNumber res("1");
-
-    if (num > 10000 || num < 0)
-    {
-        throw logic_error("Input is out of range");
-    }
-
-    for (int i = 1; i <= num; i++)
-    {
-
-        BigNumber multiplier(to_string(i));
-
-        res = res * multiplier;
-    }
-
-    return res;
-}
-
-BigNumber BigNumber::ln(BigNumber n)
-{
-
-#pragma region old
-    // uint64_t steps = 10000;
-
-    // if (n <= zero)
-    // {
-    //     throw std::invalid_argument("The argument should be positive");
-    // }
-    // if (n <= one)
-    // {
-    //     return -ln(one / n);
-    // }
-
-    // BigNumber res = zero, x_i = one;
-
-    // BigNumber dx = (n - one) / BigNumber(steps);
-    // for (int i = 0; i < steps; i++)
-    // {
-
-    //     x_i += dx;
-
-    //     res += one / x_i * dx;
-    // }
-
-    // return res;
-
-#pragma endregion
-
-    if (n <= 0)
-        throw invalid_argument("Argument should be positive");
-
-    BigNumber ln2 = string("0."
-                           "69314718055994530941723212145817656807550013436025525412068000949339362"
-                           "19696947156058633269964186875");
-
-    // use fact ln(2^p * g) = p * ln(2) + ln(g)
-    // find p
-
-    BigNumber p = 0;
-    BigNumber g = n;
-    while (g >= 2)
-    {
-        p += 1;
-        g /= 2;
-    }
-    while (g < 1)
-    {
-        p -= 1;
-        g *= 2;
-    }
-
-    // https://math.stackexchange.com/questions/4519431/taylor-series-convergence-for-logx/4519474#4519474
-    BigNumber x_i;
-    BigNumber res = 0;
-
-    for (int i = 0; i < iterations; i++)
-    {
-
-        x_i = one / (2 * i + 1);
-        x_i *= intPow((g - 1) / (g + 1), 2 * i + 1);
-        res += x_i;
-    }
-
-    res *= 2;
-
-    return p * ln2 + res;
-}
-
-BigNumber BigNumber::intPow(BigNumber base, int exponent)
-{
-    BigNumber res = one;
-    for (int i = 0; i < exponent; i++)
-    {
-        res *= base;
-    }
-    return res;
-}
-
-bool BigNumber::isPrime(BigNumber n)
-{
-    if (n <= one || !n.isInt())
-        return false;
-
-    BigNumber upperBound = n;
-
-    for (BigNumber i = two; BigNumber(i) < upperBound; i += one)
-    {
-        if (n % BigNumber(i) == zero)
-            return false;
-    }
-    return true;
-}
-
-BigNumber BigNumber::nextPrime(BigNumber n)
-{
-    if (n < two)
-        return two;
-
-    BigNumber begin = n.truncate(0) + 1;
-
-    while (!isPrime(begin))
-    {
-        begin += one;
-    }
-    return begin;
-}
-
-int BigNumber::find(BigNumber arr[], int size, BigNumber target)
-{
-    for (int i = 0; i < size; i++)
-    {
-        if (arr[i] == target)
-            return i;
-    }
-    return -1;
-}
-
-void BigNumber::bubbleSort(BigNumber arr[], int size)
-{
-
-    bool swapped = false;
-
-    for (int i = 0; i < size; i++)
-    {
-        for (int j = 0; j < size - i - 1; j++)
-        {
-            if (arr[j] > arr[j + 1])
-            {
-                swap(arr[j], arr[j + 1]);
-                swapped = true;
-            }
-        }
-        if (!swapped)
-            break;
-        swapped = false;
-    }
-}
-
-BigNumber BigNumber::getAverage(BigNumber arr[], int size)
-{
-    BigNumber sum = zero;
-    for (int i = 0; i < size; i++)
-        sum += arr[i];
-    return sum / BigNumber(size);
-}
-
-BigNumber BigNumber::chudnovskyPI(int n)
-{
-#pragma region old
-
-// BigNumber res = zero;
-
-// for (int i = 0; i < n; i++)
-// {
-//     BigNumber term = zero;
-
-//     term += BigNumber(13591409) + BigNumber(545140134) * BigNumber(i);
-//     term *= factorial(6 * i);
-//     if (i % 2 == 1)
-//         term *= -one;
-
-//     term /= factorial(3 * i) * intPow(factorial(i), 3) * intPow(BigNumber(640320), 3 * i);
-
-//     res += term;
-// }
-
-// res *= one / (BigNumber(426880) * sqroot(BigNumber(10005)));
-
-// res = one / res;
-
-// return res;
-#pragma endregion
-
-    BigNumber a_k = one;
-    BigNumber a_sum = one;
-    BigNumber b_sum = zero;
-    BigNumber C = 640320;
-
-    BigNumber C3_OVER_24 = intPow(C, 3) / 24;
-
-    for (int i = 1; i < n; i++)
-    {
-        a_k *= -(6 * i - 5) * (2 * i - 1) * (6 * i - 1);
-        a_k /= intPow(i, 3) * C3_OVER_24;
-        a_sum += a_k;
-        b_sum += a_k * i;
-    }
-
-    BigNumber total = a_sum * 13591409 + b_sum * 545140134;
-    BigNumber pi = sqroot(10005) * 426880 / total;
-
-    return pi.round(n);
-}
 
 // Modifies precision to which all arithemetic operations truncate
 // their results
@@ -972,13 +698,13 @@ void BigNumber::setPrecision(int precision)
 {
     if (precision < 1)
         throw invalid_argument("Precision should not be less than 1");
-    BigNumber::precision = precision + 20;
-    BigNumber::printPrecision = precision;
+    BigNumber::_precision = precision + 20;
+    BigNumber::_printPrecision = precision;
 }
 
 int BigNumber::getPrecision()
 {
-    return BigNumber::printPrecision;
+    return BigNumber::_printPrecision;
 }
 
 #pragma endregion
@@ -995,48 +721,64 @@ BigNumber::BigNumber(const string &str)
 
     if (str[0] == '-')
     {
-        isNegative = true;
-        digits = str.substr(1);
+        _isNegative = true;
+        _digits = str.substr(1);
     }
     else
     {
-        digits = str;
-        isNegative = false;
+        _digits = str;
+        _isNegative = false;
     }
 
     int decimal = str.find(".");
 
     if (decimal == str.npos)
-        digits += ".0";
+        _digits += ".0";
 
-    decimalPoint = digits.find(".");
-    digits.erase(decimalPoint, 1);
+    _decimalPoint = _digits.find(".");
+    _digits.erase(_decimalPoint, 1);
 
-    *this = this->truncate(precision);
+    *this = this->truncate(_precision);
     removeLeadingZeroes();
     removeTrailingZeroes();
 
-    if (digits == "-0.0")
+    if (_digits == "-0.0")
     {
-        digits = "0.0";
-        isNegative = false;
+        _digits = "0.0";
+        _isNegative = false;
     }
 }
 
-BigNumber::BigNumber(double num) : BigNumber(to_string(num))
+BigNumber::BigNumber(double num)
 {
+
+    string temp = to_string(num);
+    int decLength = temp.find('.');
+    if (decLength == string::npos)
+        decLength == temp.size();
+
+    std::stringstream ss;
+
+    int requiredPres = __DBL_DIG__ - decLength;
+
+    requiredPres = requiredPres < 0 ? 0 : requiredPres;
+
+    ss.precision(requiredPres);
+    ss << std::fixed << num;
+
+    *this = BigNumber(ss.str());
 }
 
 string BigNumber::toString()
 {
 
-    BigNumber temp = this->round(BigNumber::printPrecision);
+    BigNumber temp = this->round(BigNumber::_printPrecision);
     temp.removeTrailingZeroes();
 
-    string res = temp.digits;
+    string res = temp._digits;
 
-    res.insert(decimalPoint, ".");
-    if (isNegative)
+    res.insert(_decimalPoint, ".");
+    if (_isNegative)
     {
         res.insert(0, "-");
     }

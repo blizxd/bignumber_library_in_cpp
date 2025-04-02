@@ -1,24 +1,22 @@
-#ifndef BIG_NUMBER_H
-#define BIG_NUMBER_H
+#pragma once
 
+#include "bigNumFn.h"
 #include <cstdint>
 #include <string>
 
 class BigNumber
 {
 private:
-    std::string digits;
-    uint16_t decimalPoint;
-    bool isNegative = false;
+    std::string _digits;
+    uint16_t _decimalPoint;
+    bool _isNegative = false;
 
-    static int precision;
-    static int printPrecision;
-    static const int iterations = 100;
+    static int _precision;
+    static int _printPrecision;
 
-    static BigNumber zero;
-    static BigNumber one;
-    static BigNumber two;
-    static BigNumber PI;
+    static const BigNumber _zero;
+    static const BigNumber _one;
+    static const BigNumber _two;
 
     void removeTrailingZeroes();
     void removeLeadingZeroes();
@@ -32,6 +30,7 @@ private:
 
 public:
     bool isInt() const;
+    bool isNegative() const;
     BigNumber abs() const;
     BigNumber truncate(int precision) const;
     BigNumber round(int precision) const;
@@ -57,25 +56,6 @@ public:
     BigNumber &operator%=(const BigNumber &other);
     BigNumber operator-() const;
 
-    // -------------------------------
-    // Static methods
-    // -------------------------------
-
-    static BigNumber sin(BigNumber n);
-    static BigNumber sqroot(BigNumber n);
-    static BigNumber factorial(int num);
-    static BigNumber ln(BigNumber n);
-    static BigNumber intPow(BigNumber base, int exponent);
-    static bool isPrime(BigNumber n);
-    static BigNumber nextPrime(BigNumber n);
-    static int find(BigNumber arr[], int size, BigNumber target);
-    static void bubbleSort(BigNumber arr[], int size);
-    static BigNumber getAverage(BigNumber arr[], int size);
-    static BigNumber chudnovskyPI(int n);
-
-    // -------------------------------
-    // -------------------------------
-
     static void setPrecision(int precision);
     static int getPrecision();
 
@@ -84,5 +64,3 @@ public:
     BigNumber();
     std::string toString();
 };
-
-#endif // BIG_NUMBER_H

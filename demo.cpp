@@ -1,7 +1,9 @@
+#include "bigNumFn.h"
 #include "bigNumber.h"
 #include <algorithm>
 #include <array>
 #include <assert.h>
+#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <exception>
@@ -127,23 +129,23 @@ int main()
 
 #pragma region Factorial
 
-    assert(BigNumber::factorial(10).toString() == "3628800.0");
-    assert(BigNumber::factorial(20).toString() == "2432902008176640000.0");
-    assert(BigNumber::factorial(30).toString() == "265252859812191058636308480000000.0");
-    assert(BigNumber::factorial(40).toString() == "815915283247897734345611269596"
-                                                  "115894272000000000.0");
-    assert(BigNumber::factorial(80).toString() ==
+    assert(BigNumFn::factorial(10).toString() == "3628800.0");
+    assert(BigNumFn::factorial(20).toString() == "2432902008176640000.0");
+    assert(BigNumFn::factorial(30).toString() == "265252859812191058636308480000000.0");
+    assert(BigNumFn::factorial(40).toString() == "815915283247897734345611269596"
+                                                 "115894272000000000.0");
+    assert(BigNumFn::factorial(80).toString() ==
            "715694570462638022948115337231865321655846573423657525771094450"
            "58227039255480148842668944867280814080000000000000000000.0");
-    assert(BigNumber::factorial(80).toString() ==
+    assert(BigNumFn::factorial(80).toString() ==
            "715694570462638022948115337231865321655846573423657525"
            "7710944505822703925548014884266894486728081408000000000"
            "0000000000.0");
-    assert(BigNumber::factorial(90).toString() ==
+    assert(BigNumFn::factorial(90).toString() ==
            "148571596448176149730952273362082573788556996128468876"
            "6942216863704985393094065876545992131370884059645617234"
            "469978112000000000000000000000.0");
-    assert(BigNumber::factorial(100).toString() ==
+    assert(BigNumFn::factorial(100).toString() ==
            "933262154439441526816992388562667004907159682643816214"
            "6859296389521759999322991560894146397615651828625369792"
            "0827223758251185210916864000000000000000000000000.0");
@@ -159,6 +161,16 @@ int main()
     TEST_OP(-3684549.96, /, 655.2, -5623.55);
     TEST_OP(3684549.96, /, -655.2, -5623.55);
     TEST_OP(3.131009, /, 0.00238, 1315.55);
+
+    try
+    {
+        TEST_OP(0.0, /, 0.0, 1.0);
+        assert(false);
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << e.what() << std::endl;
+    }
 
 #pragma endregion
 
@@ -200,14 +212,31 @@ int main()
     TEST_OP(123456789, %, 1000, 789);
 #pragma endregion
 
+#pragma region Extras
+    assert(BigNumFn::sqroot(0.47757561893).toString() ==
+           "0.6910684618255994468819967992347294702963950606816492239604015606472946339100888190"
+           "2246729"
+           "7781586546");
+
+    assert(BigNumFn::ln(5).toString() == "1."
+                                         "609437912434100374600759333226187639525601354268517721912"
+                                         "647891474178987707657764630133878093179611");
+
+    assert(BigNumFn::sin(20).toString() == "0."
+                                           "9129452507276276543760999838456823012979325837081899563"
+                                           "05128114768848919349072976044480049640469976");
+
+#pragma endregion
+
 #pragma region Extra
-    BigNumber::setPrecision(50);
 
-    cout << BigNumber::sqroot(BigNumber("2")).toString() << endl;
+    auto start = chrono::high_resolution_clock::now();
 
-    cout << BigNumber::sin(BigNumber("2")).toString() << endl;
+    cout << BigNumFn::sqroot(BigNumber("2")).toString() << endl;
 
-    cout << BigNumber::chudnovskyPI(100).toString() << endl;
+    auto end = chrono::high_resolution_clock::now();
+    auto total = chrono::duration_cast<chrono::milliseconds>(end - start);
+    cout << "Square root took " << total.count() << " ms";
 
 #pragma endregion
     return 0;

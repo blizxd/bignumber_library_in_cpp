@@ -1,3 +1,4 @@
+#include "bigNumFn.h"
 #include "bigNumber.h"
 #include <iostream>
 #include <stdio.h>
@@ -30,61 +31,61 @@ string toStr(myType m)
 // compute a factorial
 myType myFactorial(int n)
 {
-    return BigNumber::factorial(n);
+    return BigNumFn::factorial(n);
 };
 
 // finds the next prime, bigger than n
 myType myPrime(myType n)
 {
-    return BigNumber::nextPrime(n);
+    return BigNumFn::nextPrime(n);
 };
 
 // finds d to the power of (positive) p
 myType myPow(double d, int p)
 {
-    return BigNumber::intPow(d, p);
+    return BigNumFn::intPow(d, p);
 };
 
 // finds (natural) logarithm of d
 myType myLog(double d)
 {
-    return BigNumber::ln(d);
+    return BigNumFn::ln(d);
 }
 
 // finds sinus of d
 myType mySin(double d)
 {
-    return BigNumber::sin(d);
+    return BigNumFn::sin(d);
 }
 
 // finds square root of d
 myType mySqrt(double d)
 {
-    return BigNumber::sqroot(d);
+    return BigNumFn::sqroot(d);
 }
 
 // finds a value of PI with n digits of precision (zeroes afterwards)
 myType myPi(int n)
 {
-    return BigNumber::chudnovskyPI(n);
+    return BigNumFn::chudnovskyPI(n);
 }
 
 // computes an average of n valus in an array
 myType myAvg(myType *data, int n)
 {
-    return BigNumber::getAverage(data, n);
+    return BigNumFn::getAverage(data, n);
 }
 
 // search for a value in an array of n numbers and return an index
 int myFind(myType *data, int n, myType value)
 {
-    return BigNumber::find(data, n, value);
+    return BigNumFn::find(data, n, value);
 }
 
 // sorts data in an array of n numbers by (optimized) bubble sort algorithm
 void mySort(myType *data, int n)
 {
-    BigNumber::bubbleSort(data, n);
+    BigNumFn::bubbleSort(data, n);
 }
 
 /* DO NOT MODIFY CODE BELOW */
