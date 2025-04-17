@@ -1,0 +1,5 @@
+140 ms - sqroot
+
+Square root took 145 ms
+
+Square root took 6 ms (11 ms in debug mode)

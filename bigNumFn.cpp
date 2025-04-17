@@ -1,31 +1,35 @@
 #include "bigNumFn.h"
 #include "bigNumber.h"
+#include <cassert>
 #include <exception>
 #include <iostream>
 
 using namespace std;
+
+// Internal variables
+namespace
+{
+    const BigNumber zero("0");
+    const BigNumber one("1");
+    const BigNumber two("2");
+    const BigNumber
+        PI("3."
+           "141592653589793238462643383279502884197169399375105820974944592307816406286208998628034"
+           "825342117067982148086513282306647093844609550582231725359408128481117450284102701938521"
+           "105559644622948954930381964428810975665933446128475648233786783165271201909145648566923"
+           "4603486104543266482133936072602491412737245870066063155881748815209209628");
+    const BigNumber ln2 =
+        string("0."
+               "69314718055994530941723212145817656807550013436025525412068000949339362"
+               "19696947156058633269964186875");
+    const int sinIterations = 60;
+    const int lnIterations = 80;
+    const int sqRootIterations = 15;
+
+}
+
 namespace BigNumFn
 {
-
-    // Internal variables
-    namespace
-    {
-        const BigNumber zero("0");
-        const BigNumber one("1");
-        const BigNumber two("2");
-        const BigNumber
-            PI("3."
-               "14159265358979323846264338327950288419716939937510582097494459230781640628"
-               "62089986280348253421170679821480865132823066470938446095505");
-        const BigNumber ln2 =
-            string("0."
-                   "69314718055994530941723212145817656807550013436025525412068000949339362"
-                   "19696947156058633269964186875");
-        const int sinIterations = 100;
-        const int lnIterations = 100;
-        const int sqRootIterations = 60;
-
-    }
 
     // Calculate sine; n is in radians
     BigNumber sin(const BigNumber &arg)
@@ -64,12 +68,35 @@ namespace BigNumFn
     }
 
     // Calculate √x using newton's method
-    BigNumber sqroot(const BigNumber &n)
+    BigNumber sqroot(const BigNumber &arg)
     {
+        if (arg == 0)
+            return 0;
+
+        BigNumber upperBound = 10;
+        BigNumber lowerBound = 0.1;
+
+        BigNumber n = arg;
 
         if (n < zero)
         {
             throw std::invalid_argument("The argument should be non-negative");
+        }
+
+        // Reduce the argument to [0.1;10]
+        // n = 10^2k *a
+        // sqroot(n) = 10^k * a
+        int k = 0;
+
+        while (n > upperBound)
+        {
+            n /= 100;
+            k += 1;
+        }
+        while (n < lowerBound)
+        {
+            n *= 100;
+            k -= 1;
         }
 
         BigNumber oneOverN = one / n;
@@ -78,7 +105,7 @@ namespace BigNumFn
         // Newton method for initial approximation of 1/sqroot(n)
         // f(x) = x^2-n
         // f'(x) = 2x
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 2; i++)
         {
             BigNumber f_x = x * x - oneOverN;
             BigNumber fprime_x = two * x;
@@ -126,9 +153,33 @@ namespace BigNumFn
 
 #pragma endregion
 
-        BigNumber finalRes = n * x;
+        BigNumber finalRes = n * x * intPow(10, k);
 
         return finalRes;
+    }
+
+    BigNumber ceilSqroot(const BigNumber &arg)
+    {
+        if (arg < zero)
+        {
+            throw std::invalid_argument("The argument should be non-negative");
+        }
+
+        // Initial guess
+        BigNumber x = arg / 2;
+
+        for (int i = 0; i < 2; i++)
+        {
+            BigNumber f_x = x * x - arg;
+            BigNumber fprime_x = two * x;
+
+            x = x - f_x / fprime_x; // x_(n+1) = x_n - f(x_n)/f'(x_n)
+        }
+
+        // get ceil of x
+        x = x.truncate(0) + 1;
+
+        return x;
     }
 
     BigNumber factorial(int num)
@@ -194,11 +245,12 @@ namespace BigNumFn
     BigNumber intPow(const BigNumber &base, int exponent)
     {
         BigNumber res = one;
-        for (int i = 0; i < exponent; i++)
+        for (int i = 0; i < std::abs(exponent); i++)
         {
             res *= base;
         }
-        return res;
+
+        return exponent < 0 ? one / res : res;
     }
 
     bool isPrime(const BigNumber &n)
@@ -206,13 +258,76 @@ namespace BigNumFn
         if (n <= one || !n.isInt())
             return false;
 
-        BigNumber upperBound = (sqroot(n)).truncate(0) + 1;
-
-        for (BigNumber i = two; i < upperBound; i += one)
+        if (n == 2 || n == 3)
         {
-            if (n % i == zero)
+            return true;
+        }
+
+        if (n % 2 == 0 || n % 3 == 0)
+        {
+            return false;
+        }
+
+        BigNumber upperBound = ceilSqroot(n);
+
+        for (BigNumber i = 5; i < upperBound; i += 6)
+        {
+            if (n % i == zero || n % (i + 2) == zero)
                 return false;
         }
+        return true;
+    }
+
+    BigNumber modPower(BigNumber a, BigNumber exponent, const BigNumber &p)
+    {
+        BigNumber res = 1;
+        a = a % p;
+
+        if (a == 0)
+            return 0;
+
+        while (exponent > 0)
+        {
+            if (exponent.isOdd())
+                res = (res * a) % p;
+
+            exponent = (exponent / 2).truncate(0);
+            a = (a * a) % p;
+        }
+        return res;
+    }
+
+    BigNumber gcd(const BigNumber &a, const BigNumber &b)
+    {
+        if (a < b)
+            return gcd(b, a);
+        else if (a % b == 0)
+            return b;
+        else
+            return gcd(b, a % b);
+    }
+
+    bool isPrimeFerma(const BigNumber &n, int k)
+    {
+        if (n <= 1 || n == 4)
+            return false;
+        if (n <= 3)
+            return true;
+
+        while (k > 0)
+        {
+
+            BigNumber a = BigNumber(2) + BigNumber(rand()) % (n - 4);
+
+            if (gcd(n, a) != 1)
+                return false;
+
+            if (modPower(a, n - 1, n) != 1)
+                return false;
+
+            k--;
+        }
+
         return true;
     }
 
@@ -223,10 +338,19 @@ namespace BigNumFn
 
         BigNumber begin = n.truncate(0) + 1;
 
-        while (!isPrime(begin))
+        bool foundPrime = false;
+
+        while (!foundPrime)
         {
-            begin += one;
+            foundPrime = isPrimeFerma(begin);
+
+            if (foundPrime && isPrime(begin))
+                break;
+
+            foundPrime = false;
+            begin += 1;
         }
+
         return begin;
     }
 

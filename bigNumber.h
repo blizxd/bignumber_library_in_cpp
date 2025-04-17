@@ -17,16 +17,30 @@ private:
     static const BigNumber _zero;
     static const BigNumber _one;
     static const BigNumber _two;
+    static const BigNumber _ten;
 
     void removeTrailingZeroes();
     void removeLeadingZeroes();
-    bool isValidInput(const std::string &str) const;
-    void allignDecimalPlaces(BigNumber &left, BigNumber &right) const;
+    static bool isValidInput(const std::string &str);
+    static void allignDecimalPlaces(BigNumber &left, BigNumber &right);
     bool compareAbsValue(const BigNumber &other) const;
+
     BigNumber addAbsValue(const BigNumber &other) const;
     BigNumber subtractAbsValue(const BigNumber &other) const;
     BigNumber multiplyAbsValue(const BigNumber &other) const;
     BigNumber divideAbsValue(const BigNumber &other) const;
+
+    BigNumber directAdd(const BigNumber &other) const;
+    BigNumber directSubtract(const BigNumber &other) const;
+    BigNumber directMultiply(const BigNumber &other) const;
+    BigNumber fastMod(const BigNumber &p) const;
+
+    std::pair<BigNumber, BigNumber> splitNumber(int pos) const;
+    static int makeEqualLength(BigNumber &n1, BigNumber &n2);
+    BigNumber shiftIntegerLeft(int decPlaces) const;
+    BigNumber karatsubaMult(const BigNumber &other) const;
+    BigNumber optimizedMultAbsValue(const BigNumber &other) const;
+    BigNumber multiplyHandler(const BigNumber &other) const;
 
 public:
     bool isInt() const;
@@ -34,6 +48,7 @@ public:
     BigNumber abs() const;
     BigNumber truncate(int precision) const;
     BigNumber round(int precision) const;
+    bool isOdd() const;
 
     BigNumber operator+(const BigNumber &other) const;
     BigNumber operator-(const BigNumber &other) const;

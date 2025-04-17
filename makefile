@@ -1,6 +1,6 @@
 # Compiler and flags
 CC := g++
-CFLAGS := -g -Wall -Wextra -pedantic -std=c++11 
+CFLAGS := -g -fexceptions -Wall -Wextra -pedantic -std=c++11 
 LDFLAGS := 
 
 # Directories
@@ -14,15 +14,20 @@ all : $(BIN_DIR)/demo.exe $(BIN_DIR)/test.exe
 
 #Demo
 $(BIN_DIR)/demo.exe : $(OBJ_DIR)/demo.o $(OBJ_DIR)/bigNumber.o $(OBJ_DIR)/bigNumFn.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 #Test
 $(BIN_DIR)/test.exe : $(OBJ_DIR)/test.o $(OBJ_DIR)/bigNumber.o $(OBJ_DIR)/bigNumFn.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC)  $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+runDemo:
+	$(BIN_DIR)/demo.exe
+
+runTest:
+	$(BIN_DIR)/test.exe
 
 clean :
 	rm -rf $(OBJ_DIR)/* $(BIN_DIR)/*
