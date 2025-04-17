@@ -333,6 +333,7 @@ namespace BigNumFn
 
     BigNumber nextPrime(const BigNumber &n)
     {
+
         if (n < two)
             return two;
 
@@ -342,6 +343,10 @@ namespace BigNumFn
 
         while (!foundPrime)
         {
+
+            // If fermat's algorithm gives positive result
+            // Then it is likely that number is prime
+            // And we check it
             foundPrime = isPrimeFerma(begin);
 
             if (foundPrime && isPrime(begin))
